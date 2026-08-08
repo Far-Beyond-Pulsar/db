@@ -8,6 +8,7 @@ import {
   Cpu,
   Map,
   MonitorUp,
+  Database,
   Layers,
   ShieldCheck,
   Radio,
@@ -44,6 +45,13 @@ const LAYERS = [
     tag: "GPU · Layer 2",
     desc: "Region-partitioned SSBOs shared across every registered cell. Delta-sync uploads only dirty rows. Generation buffer + slot mirror in VRAM for GPU-side handle validation, with bulk rebuild for device loss.",
     items: ["SceneGpuStore", "RegionPool", "SceneBuffer", "CellGpuState"],
+  },
+  {
+    icon: Database,
+    name: "World Mirror",
+    tag: "CPU+GPU · entity storage",
+    desc: "A second storage model alongside the paged cells above: an archetype ECS (World / Entity / Component) with an opt-in GPU mirror. Attaching a store makes every #[gpu] field on an inserted component write or dirty-mark itself automatically — Once-mode fields upload on first insert only, DirtyTracked fields batch into one flush per frame. Scattered dirty rows (the common shape under entity churn) route through a GPU scatter-write compute pass instead of one upload call per row.",
+    items: ["World", "GpuMirrorHandle", "MirrorMode", "DirtyTrackedSceneBuffer"],
   },
   {
     icon: Layers,

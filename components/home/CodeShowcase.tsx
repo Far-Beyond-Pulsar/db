@@ -37,7 +37,7 @@ struct Character {
     /// GPU mirror + network-replicated every frame.
     #[gpu]
     #[replicate(encoding = GpuHandle, condition = Always)]
-    skinned_mesh: Handle<SkinnedMesh>,
+    skinned_mesh: Handle,
 
     /// One-shot RPC: play an animation on all clients.
     #[replicate(encoding = Event, condition = Multicast)]

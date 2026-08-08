@@ -10,6 +10,7 @@ const TOC = [
   { id: "core-concepts", label: "Core Concepts" },
   { id: "spatial-cells", label: "Spatial Cells" },
   { id: "streaming-grid", label: "Streaming Grid" },
+  { id: "world-mirror", label: "World ↔ GPU Mirror" },
   { id: "macros", label: "Derive Macros" },
   { id: "phase-machine", label: "Frame Phase Machine" },
   { id: "replication", label: "Replication Primitives" },
@@ -21,8 +22,13 @@ pulsar_scenedb = { git = "https://github.com/Far-Beyond-Pulsar/SceneDB" }
 pulsar_scenedb_derive = { git = "https://github.com/Far-Beyond-Pulsar/SceneDB" }
 
 [dependencies]
-pulsar_scenedb = { workspace = true }
-pulsar_scenedb_derive = { workspace = true }`;
+pulsar_scenedb = { workspace = true, features = ["gpu"] }
+pulsar_scenedb_derive = { workspace = true }
+
+# "gpu" is opt-in (off by default) -- enables wgpu and every #[gpu]-mirrored
+# path (SceneGpuStore, the World mirror, GPU asset storage). The storage,
+# spatial, streaming, and replication layers need nothing beyond the
+# default feature set.`;
 
 const SPATIAL_CODE = `use pulsar_scenedb::{SpatialCell, Aabb, Handle};
 
@@ -76,6 +82,44 @@ let transitions = grid.take_transitions();
 // Pin a cell to keep it loaded regardless of player positions.
 grid.pin(CellCoord { x: 5, z: 3 }, Domain::Inner);
 grid.unpin(CellCoord { x: 5, z: 3 });`;
+
+const WORLD_MIRROR_CODE = `use pulsar_scenedb::{World, gpu::GpuMirrorHandle};
+use pulsar_scenedb_derive::SceneStore;
+
+/// #[gpu(layout = packed)] interleaves every #[gpu] field into one SSBO
+/// row instead of one buffer per field.
+#[derive(SceneStore, Clone, Copy)]
+#[gpu(layout = packed)]
+struct Instance {
+    #[gpu(mirror = Once)]    // written on first insert, never again
+    model: [f32; 16],
+    #[gpu(mirror = Once)]
+    normal_mat: [f32; 16],
+    #[gpu]                   // DirtyTracked (the default): re-synced on change
+    mesh_id: u32,
+}
+
+Instance::register_gpu_columns_growable(&mut store, 1024, &device);
+
+let mut world = World::new();
+world.attach_gpu_mirror(GpuMirrorHandle::new(store, queue.clone()));
+
+let entity = world.spawn();
+world.insert(entity, Instance { model, normal_mat, mesh_id: 7 });
+// Every #[gpu] field above already wrote or dirty-marked itself inside
+// insert() -- no manual dispatch call.
+
+// Once per frame, after your simulation step:
+world.flush_gpu_mirror(&queue);`;
+
+const WORLD_MIRROR_CAPACITY_CODE = `// Ahead of a known-size batch (streaming a sublevel, spawning a wave):
+world.reserve_gpu_mirror_capacity(&queue, 10_000)
+    .expect("mirror attached")
+    .expect("reserve succeeds");
+
+// At a natural boundary after a peak-then-drop (not every frame --
+// this is a real GPU-to-GPU copy, same cost as growth):
+world.shrink_gpu_mirror_to_fit(&queue, highest_live_entity_index, 1.5);`;
 
 const SCENESTORE_CODE = `use pulsar_scenedb_derive::SceneStore;
 
@@ -178,6 +222,7 @@ const LAYERS_TABLE: [string, string, string, string][] = [
   ["Spatial", "CPU", "SpatialCell, Aabb, Frustum", "Six bounds columns, AABB + frustum queries, scalar + SIMD"],
   ["Streaming", "CPU", "StreamingGrid, CellCoord, Domain, GridConfig", "Concentric classification, hysteresis, cross-fade, persistent pinning"],
   ["GPU store", "GPU", "SceneGpuStore, RegionPool, SceneBuffer, CellGpuState", "Region-partitioned SSBOs, delta-sync, generation validation, device loss rebuild"],
+  ["World mirror", "CPU+GPU", "World, Entity, GpuMirrorHandle, MirrorMode, DirtyTrackedSceneBuffer", "Archetype ECS with an opt-in GPU mirror — automatic per-field write/dirty-mark on insert, batched flush, GPU scatter-write for scattered churn"],
   ["Harvest", "CPU→GPU", "HarvestPipeline, HarvestStaging, View, MeshClass", "Per-view spatial queries, DEI compact, per-class token routing, upload to VRAM"],
   ["Phase machine", "CPU", "SimulateWitness, HarvestPhase, RetiredPhase", "Compile-time frame phase guards"],
   ["Assets", "GPU", "GeometryArena, MeshRegistry, ClusterBuffer, TextureStore, MeshletBuffer", "GPU-side asset storage with suballocation"],
@@ -272,8 +317,10 @@ export default function DocsPage() {
               <P>
                 SceneDB is a Cargo workspace with three crates. Add <Code>pulsar_scenedb</Code> for the
                 core library and <Code>pulsar_scenedb_derive</Code> for the derive macros.
-                The replication layer is always available — no feature gate — and the core is
-                graphics-free (C0), working with <Code>--no-default-features</Code>.
+                The replication layer is always available — no feature gate. Everything GPU-related
+                sits behind the <Code>gpu</Code> feature, off by default (C0: the core has zero
+                graphics dependencies with no flags needed) — enable it to use{" "}
+                <Code>SceneGpuStore</Code>, the World mirror, or GPU asset storage.
               </P>
               <CodeBlock title="Cargo.toml" code={INSTALL_CODE} />
             </Section>
@@ -289,10 +336,19 @@ export default function DocsPage() {
               </P>
               <P>
                 Fields live in CPU columns by default. Adding <Code>#[gpu]</Code> creates an
-                additional GPU-side mirror (an SSBO column in <Code>SceneGpuStore</Code>) that is
-                delta-synced — only rows that changed since the last sync are uploaded. CPU-only
-                fields consume no VRAM, generate no dirty words, and never participate in
-                delta-sync, but they DO participate in replication and spatial queries.
+                additional GPU-side mirror (an SSBO column) that is delta-synced — only rows that
+                changed since the last sync are uploaded. CPU-only fields consume no VRAM, generate
+                no dirty words, and never participate in delta-sync, but they DO participate in
+                replication and spatial queries.
+              </P>
+              <P>
+                Two independent storage models share that same <Code>#[gpu]</Code> attribute. Inside
+                a <Code>SpatialCell</Code>/<Code>CellStorage</Code> page, the mirror is written
+                explicitly via <Code>SceneGpuStore::write_transform</Code>-style calls under a{" "}
+                <Code>SimulateWitness</Code>. Inside a <Code>World</Code> (the archetype ECS — see{" "}
+                <a href="#world-mirror" className="text-[#38bdf8] hover:text-[#7dd3fc]">World ↔ GPU Mirror</a>{" "}
+                below) with a mirror attached, the same attribute is written automatically, inside{" "}
+                <Code>world.insert()</Code> itself — no explicit write call at all.
               </P>
             </Section>
 
@@ -318,7 +374,51 @@ export default function DocsPage() {
               <CodeBlock title="streaming.rs" code={GRID_CODE} />
             </Section>
 
-            <Section id="macros" title="Derive Macros" index={4}>
+            <Section id="world-mirror" title="World ↔ GPU Mirror" index={4}>
+              <P>
+                Alongside the paged <Code>SpatialCell</Code>/<Code>CellStorage</Code> model above,
+                SceneDB has a second, independent storage model: <Code>World</Code>, an archetype
+                ECS (<Code>Entity</Code>, <Code>Component</Code>, archetype migration on insert).
+                It works standalone with no GPU dependency at all — attaching a{" "}
+                <Code>GpuMirrorHandle</Code> via <Code>World::attach_gpu_mirror</Code> is what turns
+                on automatic GPU mirroring for every <Code>#[gpu]</Code> field. Until attached,{" "}
+                <Code>World::insert</Code> behaves exactly as it would with the <Code>gpu</Code>{" "}
+                feature disabled entirely.
+              </P>
+              <P>
+                Each <Code>#[gpu]</Code> field declares its own mirror mode.{" "}
+                <Code>#[gpu(mirror = Once)]</Code> writes on the entity&apos;s first insert of that
+                component and never again — the right choice for data that doesn&apos;t change after
+                spawn (a base transform, a mesh id). Plain <Code>#[gpu]</Code> (
+                <Code>DirtyTracked</Code>, the default) marks the row dirty on every insert instead of
+                writing immediately; nothing reaches the GPU until <Code>world.flush_gpu_mirror</Code>{" "}
+                is called, once per frame. Both modes coalesce a frame&apos;s worth of writes: rows
+                that land adjacent to each other upload as one contiguous range, and rows that don&apos;t
+                — the common shape when entities churn (despawn/respawn) at scale, since a recycled
+                entity index has no relationship to physical row adjacency — route through a
+                GPU-side scatter-write compute pass instead of one upload call per row, so the flush
+                cost stays roughly constant regardless of how scattered the changed rows are.
+              </P>
+              <CodeBlock title="instance.rs" code={WORLD_MIRROR_CODE} />
+              <P>
+                Growth is lazy and unbounded by default — the first insert whose entity index
+                doesn&apos;t fit the current buffer grows it (a real GPU-to-GPU copy). For a batch
+                whose size is known ahead of time, reserve capacity up front instead; symmetrically,{" "}
+                <Code>shrink_gpu_mirror_to_fit</Code> reclaims capacity after a load spike settles.
+              </P>
+              <CodeBlock title="capacity.rs" code={WORLD_MIRROR_CAPACITY_CODE} />
+              <P>
+                A GPU-resident generation buffer (<Code>GpuMirrorHandle::generations()</Code>) tracks
+                entity liveness automatically, in lockstep with <Code>World::is_alive</Code>&apos;s
+                own CPU-side check — a shader holding a captured <Code>(row, generation)</Code> pair
+                can detect a stale reference the same way the CPU does. This costs nothing for
+                entities that never carry a <Code>#[gpu]</Code> field: the liveness entry is written
+                lazily, on an entity&apos;s first <Code>#[gpu]</Code>-bearing insert, not
+                unconditionally at spawn.
+              </P>
+            </Section>
+
+            <Section id="macros" title="Derive Macros" index={5}>
               <P>
                 <Code>#[derive(SceneStore)]</Code> generates a <Code>Pod</Code> impl, the{" "}
                 <Code>SceneColumnSet</Code> column layout, <Code>GpuColumnSet</Code> GPU write
@@ -337,7 +437,7 @@ export default function DocsPage() {
               <CodeBlock title="player_state.rs" code={REPLICATE_CODE} />
             </Section>
 
-            <Section id="phase-machine" title="Frame Phase Machine" index={5}>
+            <Section id="phase-machine" title="Frame Phase Machine" index={6}>
               <P>
                 A compile-time frame phase machine enforces the ordering: you hold a{" "}
                 <Code>SimulateWitness</Code> to write, a <Code>HarvestPhase</Code> to read back, and
@@ -347,7 +447,7 @@ export default function DocsPage() {
               <CodeBlock title="frame.rs" code={PHASE_CODE} />
             </Section>
 
-            <Section id="replication" title="Replication Primitives" index={6}>
+            <Section id="replication" title="Replication Primitives" index={7}>
               <P>
                 SceneDB records every mutation during Simulate (change tracking), encodes field
                 deltas per a component schema (delta encoding), filters which client sees what
@@ -365,7 +465,7 @@ export default function DocsPage() {
               <CodeBlock title="resync.rs" code={SNAPSHOT_CODE} />
             </Section>
 
-            <Section id="layers" title="Layer Reference" index={7}>
+            <Section id="layers" title="Layer Reference" index={8}>
               <P>Every layer is a bounded unit with a single responsibility:</P>
               <div className="overflow-x-auto rounded-xl border border-white/[0.07]">
                 <table className="w-full text-left text-[13px]">

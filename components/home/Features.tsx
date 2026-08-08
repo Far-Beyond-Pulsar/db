@@ -9,6 +9,7 @@ import {
   Cpu,
   Map,
   MonitorUp,
+  Database,
   ShieldCheck,
   Radio,
   type LucideIcon,
@@ -50,6 +51,13 @@ const LAYERS: Layer[] = [
     tag: "GPU · ssbo",
     desc: "Region-partitioned SSBOs shared across cells. Dirty tracking uploads only changed rows per frame, with generation validation and bulk rebuild for device loss recovery.",
     chips: ["SceneGpuStore", "RegionPool", "SceneBuffer", "CellGpuState"],
+  },
+  {
+    icon: Database,
+    name: "World Mirror",
+    tag: "CPU+GPU · entity storage",
+    desc: "An archetype ECS (World, Entity, Component) with an opt-in GPU mirror: attach a store and every #[gpu] field writes or dirty-marks itself automatically inside insert() — no manual dispatch call. Once-mode fields upload on first insert only; DirtyTracked fields batch into one flush per frame. Scattered per-frame writes route through a GPU scatter-write compute pass instead of one upload call per row, so churn-heavy workloads stay cheap.",
+    chips: ["World", "GpuMirrorHandle", "MirrorMode", "Entity"],
   },
   {
     icon: ShieldCheck,
