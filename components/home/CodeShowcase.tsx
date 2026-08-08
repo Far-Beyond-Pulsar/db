@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import OutlineText from "../OutlineText";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { TerminalSquare, Wand2 } from "lucide-react";
 
@@ -55,7 +56,7 @@ export function CodeShowcase() {
             <span>derive, don&apos;t write</span>
           </div>
           <h2 className="text-[clamp(2rem,4.5vw,3.5rem)] font-bold tracking-[-0.02em] leading-none max-w-2xl">
-            Wired, not <span className="text-outline-accent">written</span>
+            Wired, not <OutlineText text="written" color="rgba(14, 165, 233, 0.35)" />
           </h2>
         </div>
 

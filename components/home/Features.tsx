@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import OutlineText from "../OutlineText";
 import { cn } from "@/lib/utils";
 import {
   Boxes,
@@ -82,7 +83,7 @@ export function Features() {
               <span>select a layer</span>
             </div>
             <h2 className="text-[clamp(2rem,4.5vw,3.5rem)] font-bold tracking-[-0.02em] leading-none">
-              Layers of <span className="text-outline-accent">data</span>
+              Layers of <OutlineText text="data" color="rgba(14, 165, 233, 0.35)" />
             </h2>
           </div>
           <p className="max-w-sm text-sm text-white/40 leading-relaxed font-light">

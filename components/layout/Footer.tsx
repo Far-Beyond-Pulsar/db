@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Github } from "lucide-react";
+import OutlineText from "../OutlineText";
 import { p } from "@/lib/utils";
 
 const SECTIONS = [
@@ -38,10 +39,10 @@ const SECTIONS = [
 export function Footer() {
   return (
     <footer className="relative border-t border-white/[0.07] bg-black overflow-hidden">
-      {/* Ghost wordmark bleeding off the bottom edge */}
-      <div className="pointer-events-none select-none absolute -bottom-[0.18em] left-0 right-0 text-center">
-        <span className="text-outline font-bold tracking-[-0.04em] leading-none text-[clamp(5rem,16vw,15rem)] whitespace-nowrap">
-          SCENEDB
+      {/* Ghost wordmark behind the foreground content */}
+      <div className="pointer-events-none select-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center">
+        <span className="font-bold tracking-[-0.04em] leading-[1.05] text-[clamp(5rem,16vw,15rem)] whitespace-nowrap">
+          <OutlineText text="SCENEDB" color="rgba(255, 255, 255, 0.14)" strokeWidth={2} />
         </span>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import OutlineText from "@/components/OutlineText";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import {
   ClipboardList,
@@ -127,7 +128,7 @@ export default function ReplicationPage() {
             <span>server-authoritative · C0</span>
           </div>
           <h1 className="text-4xl sm:text-6xl font-bold tracking-[-0.03em] leading-none mb-5">
-            Replication <span className="text-outline-accent">primitives</span>
+            Replication <OutlineText text="primitives" color="rgba(14, 165, 233, 0.35)" />
           </h1>
           <p className="text-white/40 max-w-2xl text-sm leading-relaxed">
             Multiplayer and multi-user-editor support built into the data layer — change tracking,

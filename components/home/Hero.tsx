@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Github } from "lucide-react";
 import Link from "next/link";
+import OutlineText from "../OutlineText";
 import { QueryTerminal } from "./QueryTerminal";
 
 function HudLabel({ children }: { children: React.ReactNode }) {
@@ -52,11 +53,7 @@ export function Hero() {
           >
             <span className="block whitespace-nowrap">Your scene</span>
             <span className="block whitespace-nowrap">
-              is a{" "}
-              <span className="text-outline-accent hover:text-[#38bdf8] transition-colors duration-500">
-                database
-              </span>
-              .
+              is a <span className="outline-hover"><OutlineText text="database" color="rgba(14, 165, 233, 0.35)" /></span>.
             </span>
           </motion.h1>
 

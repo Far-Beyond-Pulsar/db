@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Github } from "lucide-react";
 import Link from "next/link";
+import OutlineText from "../OutlineText";
 
 export function CTASection() {
   return (
@@ -26,7 +27,7 @@ export function CTASection() {
           <h2 className="text-[clamp(2.25rem,6vw,5rem)] font-bold tracking-[-0.03em] leading-[0.95] max-w-3xl">
             <span className="block whitespace-nowrap">Store the world</span>
             <span className="block whitespace-nowrap">
-              in <span className="text-outline-accent">pages.</span>
+              in <OutlineText text="pages." color="rgba(14, 165, 233, 0.35)" />
             </span>
           </h2>
         </motion.div>
