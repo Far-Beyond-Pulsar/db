@@ -40,7 +40,7 @@ export function CTASection() {
           className="flex flex-col sm:flex-row sm:items-center gap-x-10 gap-y-6 border-t border-white/[0.07] pt-8"
         >
           <p className="max-w-md text-sm text-white/45 leading-relaxed font-light">
-            Add the crate to your Cargo.toml and turn your scene into a database — spatial
+            Add the crate to your Cargo.toml and turn your scene into a database. Spatial
             queries, streaming residency, and replication included. No framework lock-in.
           </p>
           <div className="flex flex-wrap items-center gap-x-8 gap-y-4">

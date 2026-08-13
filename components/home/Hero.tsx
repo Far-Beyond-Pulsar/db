@@ -64,13 +64,15 @@ export function Hero() {
             className="max-w-md mb-10"
           >
             <p className="text-[15px] leading-relaxed text-white/50 font-light">
-              SceneDB is a high-performance, cross-device ECS and spatial database built in Rust —
-              paged SoA storage, SIMD spatial queries, streaming residency, and network replication
-              primitives baked into the data layer for AAA engines and spatial applications.
+              SceneDB is a high-performance, cross-device ECS and spatial database built in Rust:
+              a full archetype ECS on paged SoA storage, SIMD spatial queries, streaming residency,
+              and network replication primitives baked into the data layer. One API for CPU-only and
+              GPU-mirrored worlds: <code className="font-mono text-[13px] text-[#7dd3fc]">#[gpu]</code>{" "}
+              is a placement annotation on the same programming model.
             </p>
           </motion.div>
 
-          {/* Integrated CTAs — mono link row, not floating buttons */}
+          {/* Integrated CTAs: mono link row, no floating buttons */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}

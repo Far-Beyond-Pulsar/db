@@ -104,9 +104,9 @@ const PATTERNS: [string, string][] = [
 ];
 
 const ENCODINGS = [
-  ["Pod", "0", "Plain memcpy — the fastest path"],
+  ["Pod", "0", "Plain memcpy, the fastest path"],
   ["Serialized", "1", "Self-framing owned/heap data (String, Vec<T>, Option<T>)"],
-  ["GpuHandle", "2", "Only the 8-byte handle index travels, not the resource"],
+  ["GpuHandle", "2", "Only the 8-byte handle index travels, the resource never moves"],
   ["DeltaCompressed", "3", "Stateful delta compression per field"],
   ["Event", "4", "One-shot RPC, never in state deltas"],
   ["Opaque", "5", "Engine-defined byte blob"],
@@ -131,7 +131,7 @@ export default function ReplicationPage() {
             Replication <OutlineText text="primitives" color="rgba(14, 165, 233, 0.35)" />
           </h1>
           <p className="text-white/40 max-w-2xl text-sm leading-relaxed">
-            Multiplayer and multi-user-editor support built into the data layer — change tracking,
+            Multiplayer and multi-user-editor support built into the data layer: change tracking,
             delta encoding, interest management, authority, events/RPCs, snapshots, and client-side
             prediction. Server-authoritative from the ground up, with per-field conditions driving
             everything.
@@ -177,7 +177,7 @@ export default function ReplicationPage() {
             Declare which fields replicate, how they encode, and under what conditions. The
             handshake serializes the whole schema set so every client can decode any delta it
             receives. Hand-rolled schemas compose with{" "}
-            <code className="text-[#7dd3fc] font-mono text-[13px]">SchemaBuilder</code> — or use{" "}
+            <code className="text-[#7dd3fc] font-mono text-[13px]">SchemaBuilder</code>. Or use{" "}
             <code className="text-[#7dd3fc] font-mono text-[13px]">#[derive(Replicate)]</code> and let
             the macro register real field accessors for you.
           </p>
@@ -198,7 +198,7 @@ export default function ReplicationPage() {
           </h2>
           <p className="text-sm text-white/50 leading-relaxed mb-6">
             Track changes during Simulate, drain into a <code className="text-[#7dd3fc] font-mono text-[13px]">Delta</code> at the
-            frame boundary, then filter and encode per client — relevance, conditions, and event
+            frame boundary, then filter and encode per client. Relevance, conditions, and event
             direction all enforced in one pass.
           </p>
           <CodeBlock title="server_tick.rs" code={SERVER_TICK_CODE} />

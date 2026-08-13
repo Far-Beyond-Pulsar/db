@@ -120,14 +120,14 @@ export function QueryTerminal() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         </div>
         <span className="font-mono text-[11px] text-white/35 tracking-wide">
-          scenedb — spatial query
+          scenedb · spatial query
         </span>
         <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.16em] text-white/25">
           SIMD · AVX2 / NEON
         </span>
       </div>
 
-      {/* Body — fixed area, scrolls only if content ever outgrows it */}
+      {/* Body: fixed area, scrolls only if content ever outgrows it */}
       <div className="flex-1 min-h-0 overflow-auto p-4 font-mono text-[12px] leading-[1.5]">
         {LINES.slice(0, count).map((line, i) =>
           line.divider ? (

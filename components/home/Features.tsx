@@ -12,6 +12,11 @@ import {
   Database,
   ShieldCheck,
   Radio,
+  Layers,
+  HardDrive,
+  Box,
+  Network,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -32,10 +37,17 @@ const LAYERS: Layer[] = [
     chips: ["CellStorage", "Page", "PageLayout", "LivenessMask"],
   },
   {
+    icon: Layers,
+    name: "ECS",
+    tag: "CPU · archetype",
+    desc: "World groups entities by component set into contiguous columns, with an archetype-graph edge cache so repeated insert/remove transitions cost two Vec reads. Bundle spawn resolves the destination archetype once and writes every column directly; queries resolve per-archetype once, then iterate rows by pure pointer arithmetic.",
+    chips: ["World", "Bundle", "WorldQuery", "QueryIter"],
+  },
+  {
     icon: Cpu,
     name: "Spatial",
     tag: "CPU · simd",
-    desc: "Six dedicated f32 columns hold AABB min/max per axis. Queries scan the arrays directly — no per-entity iteration, no allocation. AVX2 and NEON paths match a scalar reference bit-for-bit.",
+    desc: "Six dedicated f32 columns hold AABB min/max per axis. AABB and frustum queries scan the arrays directly. No per-entity iteration, no allocation. AVX2 and NEON paths match a scalar reference bit-for-bit.",
     chips: ["SpatialCell", "Aabb", "Frustum"],
   },
   {
@@ -53,24 +65,52 @@ const LAYERS: Layer[] = [
     chips: ["SceneGpuStore", "RegionPool", "SceneBuffer", "CellGpuState"],
   },
   {
+    icon: HardDrive,
+    name: "GPU Buffers",
+    tag: "GPU · one registry",
+    desc: "Row buffers, texture arrays, and asset registries resolve through one keyed GpuBufferRegistry. DynamicGpuBuffer covers pipeline-owned data (cull outputs, draw batches) with transparent growth; GrowableSceneBuffer backs the World mirror.",
+    chips: ["GpuBufferRegistry", "DynamicGpuBuffer", "GrowableSceneBuffer", "GenerationMirror"],
+  },
+  {
     icon: Database,
     name: "World Mirror",
     tag: "CPU+GPU · entity storage",
-    desc: "An archetype ECS (World, Entity, Component) with an opt-in GPU mirror: attach a store and every #[gpu] field writes or dirty-marks itself automatically inside insert() — no manual dispatch call. Once-mode fields upload on first insert only; DirtyTracked fields batch into one flush per frame. Scattered per-frame writes route through a GPU scatter-write compute pass instead of one upload call per row, so churn-heavy workloads stay cheap.",
-    chips: ["World", "GpuMirrorHandle", "MirrorMode", "Entity"],
+    desc: "An archetype ECS with an opt-in GPU mirror: build a World wired via new_with_gpu_mirror and every #[gpu] field auto-registers on first insert and auto-flushes inside step(). No manual dispatch call. Once-mode fields upload on first insert only; DirtyTracked fields batch into one flush per frame, routed through a GPU scatter-write pass when rows churn. get_mut returns a Mut guard that writes through on drop.",
+    chips: ["World", "GpuMirrorHandle", "MirrorMode", "Mut"],
+  },
+  {
+    icon: Box,
+    name: "Assets",
+    tag: "GPU · vram",
+    desc: "GPU-side asset storage with suballocation, keyed through the buffer registry: GeometryArena, MeshRegistry, ClusterBuffer, TextureStore, MeshletBuffer, and MaterialRegistry. Each one carries corruption validation and rebuild gates.",
+    chips: ["GeometryArena", "MeshRegistry", "ClusterBuffer", "TextureStore", "MeshletBuffer"],
   },
   {
     icon: ShieldCheck,
     name: "Phase Machine",
     tag: "CPU · compile-time",
-    desc: "Zero-sized witnesses gate every phase — SimulateWitness to write, HarvestPhase to read back, RetiredPhase to compact. Pass the wrong witness and it won't compile.",
-    chips: ["SimulateWitness", "HarvestPhase", "RetiredPhase"],
+    desc: "FrameDriver owns one frame's progression: SimulateA → SimulateB → Harvest → Boundary (retire → compact → sync). Zero-sized witnesses gate every phase. SimulateA and SimulateB are sealed, so passing the wrong witness won't compile.",
+    chips: ["FrameDriver", "SimulateA", "HarvestPhase", "BoundaryPhase"],
+  },
+  {
+    icon: Network,
+    name: "SceneDb",
+    tag: "CPU+GPU · facade",
+    desc: "SceneDb owns a World, a SubsystemRegistry, and a FrameDriver. step() runs every subsystem's simulate hooks (and flushes any attached mirror); step_gpu() drives Harvest → Boundary. Subsystems register once, hook only the phases they need, and stay callable by name from scripts via #[scenedb_subsystem] / #[subsystem_method].",
+    chips: ["SceneDb", "Subsystem", "SubsystemRegistry", "FrameDriver"],
+  },
+  {
+    icon: Link2,
+    name: "Relations",
+    tag: "CPU · columnar",
+    desc: "For component patterns where one entity points at another (portals, multi-body attachments), RelationIndex builds a dense columnar view over World: confirmed-reciprocal pairs only, with unmatched and conflict buffers for the caller to resolve. Rebuilt once per boundary; reads are zero-allocation slices.",
+    chips: ["RelationIndex", "RelationView", "ConflictEntry"],
   },
   {
     icon: Radio,
     name: "Replication",
     tag: "CPU · c0",
-    desc: "Change tracking, delta encoding, interest management, authority, events/RPCs, snapshots, and client-side prediction — multiplayer built into the data layer, not bolted on.",
+    desc: "Change tracking, delta encoding, interest management, authority, events/RPCs, snapshots, and client-side prediction. Multiplayer lives inside the data layer.",
     chips: ["ChangeTracker", "Delta", "RelevanceSet", "AuthorityTable", "Snapshot"],
   },
 ];
@@ -82,7 +122,7 @@ export function Features() {
   return (
     <section className="relative py-24 px-5 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Section header — anchored left, editorial */}
+        {/* Section header: anchored left, editorial */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-14">
           <div>
             <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.22em] text-white/30 mb-4">
@@ -95,9 +135,9 @@ export function Features() {
             </h2>
           </div>
           <p className="max-w-sm text-sm text-white/40 leading-relaxed font-light">
-            From cache-friendly pages to the frame phase machine — each layer is a bounded unit
-            with a single responsibility, and the replication suite rides on top of the frame
-            boundary.
+            From the archetype ECS and cache-friendly pages to the frame phase machine, each
+            layer is a bounded unit with a single responsibility, and the replication suite rides
+            on top of the frame boundary.
           </p>
         </div>
 

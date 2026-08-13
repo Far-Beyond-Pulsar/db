@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SceneDB — GPU-Native ECS & Spatial Database",
+    title: "SceneDB: GPU-Native ECS & Spatial Database",
   description:
     "A high-performance cross-device ECS with network replication primitives, built in Rust. Paged SoA storage, SIMD spatial queries, streaming residency, and delta-synced GPU mirrors.",
   icons: {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     apple: `${BASE}/logos/scenedb.png`,
   },
   openGraph: {
-    title: "SceneDB — GPU-Native ECS & Spatial Database",
+  title: "SceneDB: GPU-Native ECS & Spatial Database",
     description:
       "A high-performance cross-device ECS with network replication primitives, built in Rust.",
     type: "website",

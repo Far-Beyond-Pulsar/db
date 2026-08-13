@@ -22,6 +22,7 @@ let hit_count = cell.query_aabb(
 // results[0] == 0 (the handle's row passed the query)`;
 
 const MACRO_CODE = `use pulsar_scenedb_derive::{SceneStore, Replicate};
+use pulsar_scenedb::Handle;
 use pulsar_scenedb::ReplicationEncoding::*;
 use pulsar_scenedb::ReplicationCondition::*;
 
@@ -34,7 +35,11 @@ struct Character {
     #[replicate(encoding = Pod, condition = ServerAuthority)]
     position: [f32; 3],
 
-    /// GPU mirror + network-replicated every frame.
+    /// Owned by the controlling client; the server re-broadcasts.
+    #[replicate(encoding = Pod, condition = ClientAuthority)]
+    look_direction: [f32; 2],
+
+    /// GPU mirror + network-replicated every frame (handle index only).
     #[gpu]
     #[replicate(encoding = GpuHandle, condition = Always)]
     skinned_mesh: Handle,
@@ -42,7 +47,11 @@ struct Character {
     /// One-shot RPC: play an animation on all clients.
     #[replicate(encoding = Event, condition = Multicast)]
     on_play_animation: AnimationEvent,
-}`;
+}
+
+// On a World with a GPU mirror attached, #[gpu] fields auto-register on
+// first insert and flush inside step(); no manual dispatch calls.
+world.insert(world.spawn(), Character { ..Default::default() });`;
 
 export function CodeShowcase() {
   return (
@@ -56,13 +65,13 @@ export function CodeShowcase() {
             <span>derive, don&apos;t write</span>
           </div>
           <h2 className="text-[clamp(2rem,4.5vw,3.5rem)] font-bold tracking-[-0.02em] leading-none max-w-2xl">
-            Wired, not <OutlineText text="written" color="rgba(14, 165, 233, 0.35)" />
+            Wired, nothing <OutlineText text="hand-written" color="rgba(14, 165, 233, 0.35)" />
           </h2>
         </div>
 
         {/* Staggered banners */}
         <div className="relative">
-          {/* A1 — spatial query, upper left */}
+          {/* A1: spatial query, upper left */}
           <motion.div
             initial={{ opacity: 0, y: 28 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -80,7 +89,7 @@ export function CodeShowcase() {
             <CodeBlock title="src/main.rs" code={SPATIAL_CODE} />
           </motion.div>
 
-          {/* A2 — macros, lower right */}
+          {/* A2: macros, lower right */}
           <motion.div
             initial={{ opacity: 0, y: 28 }}
             whileInView={{ opacity: 1, y: 0 }}

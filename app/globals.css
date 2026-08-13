@@ -95,7 +95,7 @@ body {
     animation: marquee 32s linear infinite;
   }
 
-  /* Hover state for outline text (hero "database") — CSS overrides the
+  /* Hover state for outline text (hero "database"): CSS overrides the
      SVG presentation attributes, filling the glyph sky blue. */
   .outline-hover svg text {
     transition: stroke 500ms, fill 500ms;

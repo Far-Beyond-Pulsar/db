@@ -1,12 +1,18 @@
 const ITEMS = [
   "256 rows / page",
   "64B aligned",
+  "archetype ECS",
+  "Bundle",
+  "edge-cached",
   "AVX2",
   "NEON",
   "u64 handles",
   "6× f32 AABB",
+  "World ↔ GPU",
   "delta-sync",
   "swap-and-pop",
+  "GpuBufferRegistry",
+  "scatter-write",
   "C0 core",
   "no allocation",
 ];
